@@ -1,6 +1,7 @@
 from typing import Literal
 from enum import Enum
 from dataclasses import dataclass
+from collections import namedtuple
 
 
 class ConnState(Enum):
@@ -23,28 +24,19 @@ class TrProtocol(Enum):
     UDP6 = 4
 
 
-@dataclass(frozen=True)
-class IpSocket:
-    ip_addr: str
-    port_num: int
+IpSock = namedtuple("IpSocket", "ip_addr port_num")
+UnixSock = namedtuple("UnixSock", "type state inode path")
 
 
 @dataclass(frozen=True)
 class SocketPairs:
-    local_socket: IpSocket
-    remote_socket: IpSocket
+    local_socket: IpSock
+    remote_socket: IpSock
 
 
 @dataclass(frozen=True)
-class IpConnection:
+class IpConn:
     __slots__ = ['local_socket', 'remote_socket']
-    local_socket: IpSocket
-    remote_socket: IpSocket
+    local_socket: IpSock
+    remote_socket: IpSock
     conn_state: Literal["ESTABLISHED", "LAST_ACK", "LISTEN", "NONE", "TIME_WAIT"]
-
-
-@dataclass(frozen=True)
-class UnixDomainSocket:
-    ip_addr: str
-    port_num: int
-

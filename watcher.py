@@ -1,12 +1,17 @@
 
-
 class Watcher:
+    """ Adopts psutil api for representing socket information. """
 
-    def _get_processes(self):
+    @property
+    def internet_sockets(self) -> list:
+        return self.__get_internet_connections()
+
+    @property
+    def unix_sockets(self) -> list:
+        return self.__get_unix_sockets_connections()
+
+    def __get_internet_connections(self) -> list:
         pass
 
-    def internet_connections(self):
-        pass
-
-    def unix_sockets(self):
+    def __get_unix_sockets_connections(self) -> list:
         pass
