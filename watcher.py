@@ -1,17 +1,58 @@
 
-class Watcher:
-    """ Adopts psutil api for representing socket information. """
+from abc import ABC, abstractmethod
+from typing import Any, Optional
 
-    @property
-    def internet_sockets(self) -> list:
-        return self.__get_internet_connections()
 
-    @property
-    def unix_sockets(self) -> list:
-        return self.__get_unix_sockets_connections()
+class WatcherBase(ABC):
+    """ Abstract class for different type of Watchers. """
 
-    def __get_internet_connections(self) -> list:
+    @classmethod
+    @abstractmethod
+    def watch(cls, **spot_settings) -> Any:
         pass
 
-    def __get_unix_sockets_connections(self) -> list:
+    @classmethod
+    @abstractmethod
+    def __prepare_watching_spot_settings(cls, *args, **kwargs) -> Optional[dict]:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def __parse_watching_findings(cls, *args, **kwargs) -> Any:
+        pass
+
+
+class IpSocksWatcher(WatcherBase):
+    """ Adopts / utilizes psutil api for providing network sockets information. """
+
+    @classmethod
+    @abstractmethod
+    def watch(cls, **spot_settings) -> Any:
+        pass
+
+    @classmethod
+    def __prepare_watching_spot_settings(cls, *args, **kwargs) -> None:
+        pass
+
+    @classmethod
+    def __parse_watching_findings(cls, *args, **kwargs) -> None:
+        pass
+
+
+class UnixSocksWatcher(WatcherBase):
+    """ Adopts / utilizes psutil api for providing Unix sockets information. """
+
+    @classmethod
+    @abstractmethod
+    def watch(cls, **spot_settings) -> Any:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def __prepare_watching_spot_settings(cls, *args, **kwargs) -> Optional[dict]:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def __parse_watching_findings(cls, *args, **kwargs) -> Any:
         pass
