@@ -1,4 +1,4 @@
-from .watcher import IpWatcher
+from .watcher import IpSocksWatcher
 
 
-__all__ = ["IpWatcher"]
+__all__ = ["IpSocksWatcher"]
