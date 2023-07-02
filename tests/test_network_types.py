@@ -16,7 +16,8 @@ def test_ip_connection_instance_init():
     ip_sock1 = IpSockEndpoint(*["1.1.1.1", "tcp", "80"])
     ip_sock2 = IpSockEndpoint(*["1.1.1.2", "tcp", "82"])
 
-    IpConnection(start_socket=ip_sock1, end_socket=ip_sock2)
+    ip_conn = IpConnection(start_socket=ip_sock1, end_socket=ip_sock2)
+    assert ip_conn
 
 
 def test_ip_connection_instance_init_negative():

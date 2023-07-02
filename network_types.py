@@ -43,11 +43,10 @@ class TrProtocol(ExtendedEnum):
 
 
 IpSockTrProtocolMapping = MappingProxyType({
-    "tcp": (AF_INET, SOCK_STREAM),
-    "tcp6": (AF_INET6, SOCK_STREAM),
-    "udp": (AF_INET, SOCK_DGRAM),
-    "udp6": (AF_INET6, SOCK_DGRAM)
-
+    (AF_INET, SOCK_STREAM): "tcp",
+    (AF_INET6, SOCK_STREAM): "tcp6",
+    (AF_INET, SOCK_DGRAM): "udp",
+    (AF_INET6, SOCK_DGRAM): "udp6"
 })
 
 
@@ -63,9 +62,9 @@ class IpConnection:
     Attributes:
         _start_socket (IpSockEndpoint): ip socket endpoint object (assumed opening endpoint)
         _end_socket (IpSockEndpoint): ip socket endpoint object  (assumed ending endpoint)
-        _conn_state (None, IpSockEndpoint): state of ip connection, None is acceptable
+        _conn_state (None, str): state of ip connection, None is acceptable
     """
-    def __init__(self, start_socket: IpSockEndpoint, end_socket: IpSockEndpoint, conn_state: Optional[ConnStateT] = None):
+    def __init__(self, start_socket: IpSockEndpoint, end_socket: IpSockEndpoint, conn_state: Optional[str] = None):
         """ Constructor
 
         Args:
@@ -80,3 +79,9 @@ class IpConnection:
         self._start_socket = start_socket
         self._end_socket = end_socket
         self._conn_state = conn_state
+
+    def __str__(self):
+        return f"ip connection [ip ver, protocol:]"
+
+    def transport_protocol(self):
+        return self._start_socket.tr_prot
