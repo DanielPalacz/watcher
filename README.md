@@ -5,5 +5,5 @@
 
 #### Running tests:
 ```
- - PYTHONPATH=. pytest -s -vv tests/
+PYTHONPATH=. pytest -s -vv tests/
 ```

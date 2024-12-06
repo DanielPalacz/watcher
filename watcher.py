@@ -3,77 +3,82 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 from psutil import net_connections
-from psutil._common import sconn
+import psutil
 from typing import TypeVar
 
 from network_types import IpConnection, IpSockEndpoint, IpSockTrProtocolMapping
 
 
-PsutilSconnT = TypeVar('PsutilSconnT', bound=sconn)
+# PsutilSconnT = TypeVar('PsutilSconnT', bound=sconn)
 
 
-class WatcherBase(ABC):
-    """ Abstract class for different type of Watchers. """
+class WatcherService(ABC):
+    """ Abstract class for different type of Watchers.
 
+    Usage should be as follows:
+        watcher = Watcher(**params)
+        watching_insights = watcher.run()
+    """
     @abstractmethod
-    def watch(self, **spot_settings) -> Any:
-        pass
-
-    @abstractmethod
-    def __prepare_watching_spot_settings(self, *args, **kwargs) -> Optional[dict]:
-        pass
-
-    @abstractmethod
-    def __parse_watching_findings(self, *args, **kwargs) -> Any:
+    def run(self, **kwargs) -> list[str]:
         pass
 
 
-class IpConnectionWatcher(WatcherBase):
-    """ Adopts / utilizes psutil api for providing ip connections information. """
+class IpConnectionWatcher(WatcherService):
+    """ Representation of ip connection.
 
-    def watch(self, **spot_settings) -> Any:
-        kind_ = spot_settings.get("kind") or "inet"
-        connections_ = [self.__prepare_ip_connection(conn_) for conn_ in net_connections(kind=kind_)]
+    Args:
+        spot_settings: watching parameters
 
-    def __prepare_watching_spot_settings(self, *args, **kwargs) -> None:
-        pass
+    Attributes:
+        __spot_settings (dict): watching parameters
+    """
+    def __init__(self, **spot_settings):
+        self.__spot_settings = spot_settings
 
-    def __parse_watching_findings(self, *args, **kwargs) -> None:
-        pass
+    def run(self) -> list[str]:
+        connections_ = self.__fetch_ip_connections()
+        return connections_
 
-    @staticmethod
-    def __prepare_ip_connection(conn_raw: PsutilSconnT) -> IpConnection:
-        tr_protocol_ = IpSockTrProtocolMapping([(conn_raw.family, conn_raw.type)])
-        start_socket = IpSockEndpoint(*[conn_raw.laddr.ip, tr_protocol_, conn_raw.laddr.port])
-        end_socket = IpSockEndpoint(*[conn_raw.raddr.ip, tr_protocol_, conn_raw.raddr.port])
-
-        return IpConnection(start_socket=start_socket, end_socket=end_socket, conn_state=conn_raw.status)
-
-
-class IpSocksWatcher(WatcherBase):
-    """ Adopts / utilizes psutil api for providing network sockets information. """
-
-    def watch(self, **spot_settings) -> Any:
-        pass
-
-    def __prepare_watching_spot_settings(self, *args, **kwargs) -> None:
-        pass
-
-    def __parse_watching_findings(self, *args, **kwargs) -> None:
-        pass
+    def __fetch_ip_connections(self):
+        kind_ = self.__spot_settings.get("kind") or "inet4"
+        # Fetch all network connections
+        connections = psutil.net_connections(kind=kind_)
+        return [str(conn) for conn in connections]
 
 
-class UnixSocksWatcher(WatcherBase):
+class UnixSockWatcher(WatcherService):
     """ Adopts / utilizes psutil api for providing Unix sockets information. """
 
-    @abstractmethod
-    def watch(self, **spot_settings) -> Any:
-        pass
+    def __init__(self, **spot_settings):
+        self.__spot_settings = spot_settings
 
-    @abstractmethod
-    def __prepare_watching_spot_settings(self, *args, **kwargs) -> Optional[dict]:
-        pass
+    def run(self) -> list[str]:
+        connections_ = self.__fetch_unix_domain_socket_connections()
+        return connections_
 
-    @abstractmethod
-    def __parse_watching_findings(self, *args, **kwargs) -> Any:
-        pass
+    @staticmethod
+    def __fetch_unix_domain_socket_connections():
+        kind_ = "unix"
+        # Fetch all network connections
+        connections = psutil.net_connections(kind=kind_)
+        return [str(conn) for conn in connections]
+
+
+class WatchingManager:
+    def __init__(self, service: WatcherService): # Depends on abstraction
+        self.service = service
+
+    def watch(self):
+        watching_insights = self.service.run()
+
+if __name__ == "__main__":
+    findings = IpConnectionWatcher().run()
+    for finding in findings:
+        print(finding)
+
+    print()
+    findings = UnixSockWatcher().run()
+    for finding in findings:
+        print(finding)
+
