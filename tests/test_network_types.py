@@ -18,7 +18,9 @@ def test_ip_connection_instance_init():
 
     ip_conn = IpConnection(start_socket=ip_sock1, end_socket=ip_sock2)
     assert ip_conn
-
+    assert str(ip_conn) == "IP Connection object [IPv4, IpSocket(ip_addr='1.1.1.1', tr_prot='tcp', port_num='80'), IpSocket(ip_addr='1.1.1.2', tr_prot='tcp', port_num='82')]"
+    assert repr(ip_conn) == "IP Connection object [IPv4, IpSocket(ip_addr='1.1.1.1', tr_prot='tcp', port_num='80'), IpSocket(ip_addr='1.1.1.2', tr_prot='tcp', port_num='82')]"
+    assert ip_conn._conn_state == "NONE"
 
 def test_ip_connection_instance_init_negative():
     ip_sock1 = IpSockEndpoint(*["1.1.1.1", "tcp", "80"])

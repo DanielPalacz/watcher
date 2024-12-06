@@ -59,29 +59,42 @@ class SocketPairs:
 class IpConnection:
     """ Representation of ip connection.
 
+    Args:
+        start_socket: ip socket endpoint object (assumed opening endpoint)
+        end_socket: ip socket endpoint object  (assumed ending endpoint)
+        conn_state: state of ip connection, None is acceptable
+
     Attributes:
         _start_socket (IpSockEndpoint): ip socket endpoint object (assumed opening endpoint)
         _end_socket (IpSockEndpoint): ip socket endpoint object  (assumed ending endpoint)
-        _conn_state (None, str): state of ip connection, None is acceptable
+        _conn_state (ConnStateT): state of ip connection, None is acceptable
     """
-    def __init__(self, start_socket: IpSockEndpoint, end_socket: IpSockEndpoint, conn_state: Optional[str] = None):
-        """ Constructor
-
-        Args:
-            start_socket: ip socket endpoint object (assumed opening endpoint)
-            end_socket: ip socket endpoint object  (assumed ending endpoint)
-            conn_state: state of ip connection, None is acceptable
-        """
-
+    def __init__(self, start_socket: IpSockEndpoint, end_socket: IpSockEndpoint, conn_state: ConnStateT = "NONE"):
         if start_socket.tr_prot != end_socket.tr_prot:
             raise ValueError("Different transport protocols used in socket endpoints.", start_socket.tr_prot, end_socket.tr_prot)
+
+        if conn_state not in ConnState.members():
+            raise ValueError("Connection state has to be one of following:", ConnState.members())
 
         self._start_socket = start_socket
         self._end_socket = end_socket
         self._conn_state = conn_state
 
     def __str__(self):
-        return f"ip connection [ip ver, protocol:]"
+        return f"IP Connection object [IPv{self.ip_version}, {self._start_socket}, {self._end_socket}]"
 
+    def __repr__(self):
+        return f"IP Connection object [IPv{self.ip_version}, {self._start_socket}, {self._end_socket}]"
+
+    @property
+    def ip_version(self):
+        if "6" in self._start_socket.tr_prot:
+            return "6"
+        return "4"
+
+    @property
     def transport_protocol(self):
         return self._start_socket.tr_prot
+
+if __name__ == "__main__":
+    pass
