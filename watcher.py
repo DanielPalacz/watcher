@@ -6,6 +6,7 @@ from typing import TypeVar
 from socket import SOCK_DGRAM, SOCK_STREAM
 
 from custom_types import FindingObject, NetProtocolT, TrProtocolT, IpConnection
+from tools import ask_ai
 
 sconnT = TypeVar('sconnT')
 
@@ -98,7 +99,7 @@ class UnixSockWatcher(WatcherService):
 class AnalyzerService(ABC):
     """ Abstract class for Analyzer Services """
 
-    def analyze(self, findings: list[FindingObject]) -> list[tuple[FindingObject, bool]]:
+    def analyze(self, findings: list[FindingObject]) -> list[tuple[FindingObject, str]]:
         """ Method provides analyzing list of findings functionality
 
         Args:
@@ -106,25 +107,57 @@ class AnalyzerService(ABC):
 
         Returns:
             List of tuples with finding object and finding check. Example below:
-            [(Finding1, FindingCheck1_bool), (Finding2, FindingCheck2_bool) ... ]
+            [
+             (Finding1, FindingCheck1_bool, FindingCheck1_comment),
+             (Finding2, FindingCheck2_bool, FindingCheck2_comment) ...
+            ]
         """
         analyzing_results = []
         for finding_item in findings:
-            finding_item_check = self.analyze_item(finding_item)
-            analyzing_results.append((finding_item, finding_item_check))
+            finding_item_comment = self.analyze_item(finding_item)
+            analyzing_results.append((finding_item, finding_item_comment))
+
         return analyzing_results
 
     @abstractmethod
-    def analyze_item(self, founding: FindingObject) -> bool:
+    def analyze_item(self, founding: FindingObject) -> str:
         pass # logic to be implemented
 
 
-class IpConnectionAnalyzer(AnalyzerService):
+class Ip4ConnectionAnalyzer(AnalyzerService):
     """ Class implements analyzing functionality  for IP connections"""
 
-    @abstractmethod
-    def analyze_item(self, founding: FindingObject) -> bool:
-        pass
+    def analyze_item(self, finding: FindingObject) -> str:
+        sentence = ""
+        finding_split = str(finding).split(';')
+
+        sentence += "There is following socket opened on my host: "
+        sentence += finding_split[1].replace(" Local:addr", "")
+
+        if "127.0.0.1" in finding_split[2]:
+             sentence += " and second socket is also opened on my host: "
+             sentence += finding_split[2].replace(" Remote:addr", "")
+        elif "192.168.0.179" in finding_split[2]:
+             sentence += " and second socket is also opened on my host: "
+             sentence += finding_split[2].replace(" Remote:addr", "")
+        elif "Remote:()" in finding_split[2]:
+            sentence += " and second socket is not setuped"
+        else:
+            sentence += " and second socket: "
+            sentence += finding_split[2].replace(" Remote:addr", "")
+
+        sentence = sentence + " and status of connection is " + finding_split[3].replace(" Status:", "") + "."
+
+        if "ProcessDetails(-)" in finding_split[5]:
+            sentence += " And there is no process correlated with this connection."
+        else:
+            sentence = sentence + " And there is process correlated with this connection." + finding_split[5]
+
+        sentence += " - could you say if there is something suspicious with this?"
+
+        ai_answer = ask_ai(sentence)
+
+        return ai_answer
 
 
 class ReporterService(ABC):
@@ -164,12 +197,12 @@ class BasicReporter(ReporterService):
         Returns:
             None, only printing to console is performed
         """
-        problematic_checks = [finding for finding in findings_checks if finding[1]]
-        if problematic_checks:
-            print("There are following problematic findings:")
-        for problematic_finding in problematic_checks:
-            problematic_finding, finding_marker = problematic_finding
-            print(" *", str(problematic_finding))
+        if findings_checks:
+            print("There are following findings:")
+
+        for finding in findings_checks:
+            finding, finding_comment = finding
+            print(" *", repr(finding), "\n", finding_comment, "\n\n\n")
 
 
 
@@ -201,12 +234,13 @@ class SupervisorManager:
 if __name__ == "__main__":
     # Mock
     class _MockedAnalyzerService(AnalyzerService):
-        def analyze_item(self, founding: FindingObject) -> bool:
-            return True
+        def analyze_item(self, founding: FindingObject) -> tuple[bool, str]:
+            return True, "Comment"
 
     mocked_analyzer = _MockedAnalyzerService()
+    ip_analyzer = Ip4ConnectionAnalyzer()
     basic_reporter = BasicReporter()
     ip_watcher = IpConnectionWatcher(ip_kind="IP4", transport_kind="TCP")
 
-    supervisor = SupervisorManager(analyzer=mocked_analyzer, reporter=basic_reporter, watcher=ip_watcher)
+    supervisor = SupervisorManager(analyzer=ip_analyzer, reporter=basic_reporter, watcher=ip_watcher)
     supervisor.report()

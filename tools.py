@@ -7,7 +7,6 @@ from os import getenv
 from openai import OpenAI
 
 
-
 def configure_logger(logger_name: str) -> logging.Logger:
     """Configures logger.
 

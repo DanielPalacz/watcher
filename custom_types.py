@@ -77,11 +77,11 @@ class IpConnection(FindingObject):
         except ValueError:
             pass
 
-        return (f"{self.ip_version}:{self.transport_version}, "
-                f"Local:{self.local_address}, "
-                f"Remote:{self.remote_address}, "
-                f"Status:{self.connection_state}, "
-                f"ProcessID:{self.pid_number}, ProcessDetails({self.pid_details})")
+        return (f"{self.ip_version}:{self.transport_version}; "
+                f"Local:{self.local_address}; "
+                f"Remote:{self.remote_address}; "
+                f"Status:{self.connection_state}; "
+                f"ProcessID:{self.pid_number}; ProcessDetails({self.pid_details})")
 
     def __repr__(self) -> str:
         return self.__str__()
