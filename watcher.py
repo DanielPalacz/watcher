@@ -120,7 +120,7 @@ class AnalyzerService(ABC):
         return analyzing_results
 
     @abstractmethod
-    def analyze_item(self, founding: FindingObject) -> str:
+    def analyze_item(self, finding: FindingObject) -> str:
         pass # logic to be implemented
 
 
@@ -129,29 +129,29 @@ class Ip4ConnectionAnalyzer(AnalyzerService):
 
     def analyze_item(self, finding: FindingObject) -> str:
         sentence = ""
-        finding_split = str(finding).split(';')
+        finding_attributes = str(finding).split(';')
 
         sentence += "There is following socket opened on my host: "
-        sentence += finding_split[1].replace(" Local:addr", "")
+        sentence += finding_attributes[1].replace(" Local:addr", "")
 
-        if "127.0.0.1" in finding_split[2]:
+        if "127.0.0.1" in finding_attributes[2]:
              sentence += " and second socket is also opened on my host: "
-             sentence += finding_split[2].replace(" Remote:addr", "")
-        elif "192.168.0.179" in finding_split[2]:
+             sentence += finding_attributes[2].replace(" Remote:addr", "")
+        elif "192.168.0.179" in finding_attributes[2]:
              sentence += " and second socket is also opened on my host: "
-             sentence += finding_split[2].replace(" Remote:addr", "")
-        elif "Remote:()" in finding_split[2]:
+             sentence += finding_attributes[2].replace(" Remote:addr", "")
+        elif "Remote:()" in finding_attributes[2]:
             sentence += " and second socket is not setuped"
         else:
             sentence += " and second socket: "
-            sentence += finding_split[2].replace(" Remote:addr", "")
+            sentence += finding_attributes[2].replace(" Remote:addr", "")
 
-        sentence = sentence + " and status of connection is " + finding_split[3].replace(" Status:", "") + "."
+        sentence = sentence + " and status of connection is " + finding_attributes[3].replace(" Status:", "") + "."
 
-        if "ProcessDetails(-)" in finding_split[5]:
+        if "ProcessDetails(-)" in finding_attributes[5]:
             sentence += " And there is no process correlated with this connection."
         else:
-            sentence = sentence + " And there is process correlated with this connection." + finding_split[5]
+            sentence = sentence + " And there is process correlated with this connection." + finding_attributes[5]
 
         sentence += " - could you say if there is something suspicious with this?"
 
@@ -165,7 +165,7 @@ class ReporterService(ABC):
 
     @classmethod
     @abstractmethod
-    def report(cls, findings_checks) -> Any:
+    def report(cls, findings_checks: list[tuple[FindingObject, str]], type_of_checks: str)  -> Any:
         """ Abstract method for reporting functionality
 
         Args:
@@ -175,6 +175,8 @@ class ReporterService(ABC):
                                                                     (Finding1, FindingCheck1_bool),
                                                                     (Finding2, FindingCheck2_bool) ...
                                                                 ]
+            type_of_checks (str): text describing type of finding checks
+
         Returns:
             Any
         """
@@ -185,7 +187,7 @@ class BasicReporter(ReporterService):
     """ Class implements basic reporting functionality """
 
     @classmethod
-    def report(cls, findings_checks) -> None:
+    def report(cls, findings_checks: list[tuple[FindingObject, str]], type_of_checks: str) -> None:
         """ Method implements basic way of reporting for problematic checks.
 
         Args:
@@ -193,17 +195,67 @@ class BasicReporter(ReporterService):
                                                           Example below:
                                                           [(Finding1, FindingCheck1_bool),
                                                            (Finding2, FindingCheck2_bool) ... ]
+            type_of_checks (str): text describing type of finding checks
 
         Returns:
             None, only printing to console is performed
         """
         if findings_checks:
-            print("There are following findings:")
+            print(f"There are following {type_of_checks} findings:")
 
         for finding in findings_checks:
             finding, finding_comment = finding
             print(" *", repr(finding), "\n", finding_comment, "\n\n\n")
 
+
+class HtmlReporter(ReporterService):
+    """ Class implements basic reporting functionality """
+
+    @classmethod
+    def report(cls, findings_checks: list[tuple[FindingObject, str]], type_of_checks: str) -> None:
+        """ Method implements basic way of reporting for problematic checks.
+
+        Args:
+            findings_checks (list[tuple[FindingObject, bool]]): list of tuples with finding object and finding check,
+                                                          Example below:
+                                                          [(Finding1, FindingCheck1_bool),
+                                                           (Finding2, FindingCheck2_bool) ... ]
+            type_of_checks (str): text describing type of finding checks
+
+        Returns:
+            None, but saving to html file is performed
+        """
+        with open(f"report{type_of_checks}.html", "w") as report_file:
+            html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML report</title>
+</head>
+<body>"""
+            if findings_checks:
+                header_content = f"<h1>There are following {type_of_checks} findings:<br></br></h1>"
+                html_content += header_content
+            else:
+                return None
+
+            for index, finding in enumerate(findings_checks):
+                finding, finding_comment = finding
+                index += 1
+                finding_content = f"""<pre><h2 style='background-color: yellow'>{index}) {finding}</h2>
+{finding_comment}<hr></hr>
+
+
+</pre>
+"""
+                html_content += finding_content
+
+
+            html_content += """</body>
+</html>"""
+
+            report_file.write(html_content)
 
 
 class SupervisorManager:
@@ -224,18 +276,22 @@ class SupervisorManager:
         self.reporter = reporter
         self.watcher = watcher
 
-    def report(self) -> None:
-        """ Methods implements reporting functionality (based on Reported service)"""
+    def report(self, type_of_checks) -> None:
+        """ Methods implements reporting functionality (based on Reported service)
+
+        Args:
+            type_of_checks (str): text describing type of finding checks
+        """
         findings = self.watcher.run()
         findings_checks = self.analyzer.analyze(findings)
-        self.reporter.report(findings_checks)
+        self.reporter.report(findings_checks, type_of_checks)
 
 
 if __name__ == "__main__":
     # Mock
     class _MockedAnalyzerService(AnalyzerService):
-        def analyze_item(self, founding: FindingObject) -> tuple[bool, str]:
-            return True, "Comment"
+        def analyze_item(self, finding: FindingObject) -> str:
+            return "Comment regarding analyzed item."
 
     mocked_analyzer = _MockedAnalyzerService()
     ip_analyzer = Ip4ConnectionAnalyzer()
@@ -243,4 +299,4 @@ if __name__ == "__main__":
     ip_watcher = IpConnectionWatcher(ip_kind="IP4", transport_kind="TCP")
 
     supervisor = SupervisorManager(analyzer=ip_analyzer, reporter=basic_reporter, watcher=ip_watcher)
-    supervisor.report()
+    supervisor.report("IP4:TCP")

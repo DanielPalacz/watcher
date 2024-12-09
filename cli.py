@@ -1,6 +1,6 @@
 import click
 
-from watcher import Ip4ConnectionAnalyzer, BasicReporter, IpConnectionWatcher, SupervisorManager
+from watcher import Ip4ConnectionAnalyzer, BasicReporter, IpConnectionWatcher, SupervisorManager, HtmlReporter
 
 
 class Config:
@@ -28,19 +28,22 @@ def ip4_connections_check(config, report_type) -> None:
 
     \b
     report_type:
-      - by default it is Console report"""
+      - by default it is 'Console' report
+      - other possible option is 'Html' report"""
 
-    report_types = ["Console"]
+    report_types = ["Console", "Html"]
 
     if report_type == "Console":
         basic_reporter = BasicReporter()
+    elif report_type == "Html":
+        basic_reporter = HtmlReporter()
     else:
         raise ValueError("report type has to be one of:", report_types)
 
     ip_analyzer = Ip4ConnectionAnalyzer()
     ip_watcher = IpConnectionWatcher(ip_kind="IP4", transport_kind="TCP")
     supervisor = SupervisorManager(analyzer=ip_analyzer, reporter=basic_reporter, watcher=ip_watcher)
-    supervisor.report()
+    supervisor.report("IP4:TCP")
 
 
 if __name__ == "__main__":
