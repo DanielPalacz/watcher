@@ -1,76 +1,14 @@
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
-from typing import Any, Optional, Literal, List, Tuple
-
+from typing import Any
 
 import psutil
 from typing import TypeVar
 from socket import SOCK_DGRAM, SOCK_STREAM
 
-from network_types import IpConnection, IpSockEndpoint, IpSockTrProtocolMapping
-
+from custom_types import FindingObject, NetProtocolT, TrProtocolT, IpConnection
 
 sconnT = TypeVar('sconnT')
-IPvCodeT = Literal["inet4", "inet6"]
-IPvT = Literal["IP4", "IP6"]
-TransportT = Literal["TCP", "UDP"]
-ConnStateT = Literal["ESTABLISHED", "LAST_ACK", "LISTEN", "NONE", "TIME_WAIT"]
 
-
-class FindingObject(ABC):
-
-    @abstractmethod
-    def __str__(self) -> str:
-        pass
-
-    @abstractmethod
-    def __repr__(self) -> str:
-        pass
-
-
-@dataclass
-class IpConnection(FindingObject):
-    """ Class for extended representation of IP connection
-
-    Args:
-        ip_version: ip version, allowed: IP4 or IP6
-        transport_version: transport protocol, allowed: tcp, udp
-        local_address: local address (IP, port) with following structure:
-                                                                          addr(ip='127.0.0.1',port=9150)
-        remote_address: local address (IP, port) with following structure:
-                                                                          addr(ip='127.0.0.1',port=56162)
-        connection_state: ip connection state,
-                          one of following: "ESTABLISHED", "LAST_ACK", "LISTEN", "NONE", "TIME_WAIT"
-        pid_number: pid number of the process linked with the given connection
-        pid_details: process details of the process linked with the given connection or '-' if there is no such process
-
-    Attributes:
-        the same as Args
-
-    """
-    ip_version: IPvT
-    transport_version: TransportT
-    local_address: str
-    remote_address: str
-    connection_state: ConnStateT
-    pid_number: str
-    pid_details: str = "-"
-
-    def __str__(self) -> str:
-        try:
-            p = psutil.Process(int(self.pid_number))
-            self.pid_details = f"{str(p).replace('psutil.Process', '')[1:-1]}"
-        except ValueError:
-            pass
-
-        return (f"{self.ip_version}:{self.transport_version}, "
-                f"Local:{self.local_address}, "
-                f"Remote:{self.remote_address}, "
-                f"Status:{self.connection_state}, "
-                f"ProcessID:{self.pid_number}, ProcessDetails({self.pid_details})")
-
-    def __repr__(self) -> str:
-        return self.__str__()
 
 
 class WatcherService(ABC):
@@ -108,8 +46,8 @@ class IpConnectionWatcher(WatcherService):
         "UDP": SOCK_DGRAM
     }
 
-    def __init__(self, *, ip_kind: IPvT, transport_kind: TransportT):
-        self.__ip_kind: IPvT = ip_kind
+    def __init__(self, *, ip_kind: NetProtocolT, transport_kind: TrProtocolT):
+        self.__ip_kind: NetProtocolT = ip_kind
         self.__transport_kind: transport_kind = transport_kind
 
     def run(self) -> list[IpConnection]:
